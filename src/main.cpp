@@ -1,11 +1,16 @@
 #include <Arduino.h>
 #include <ESP32Servo.h>
+#include <WiFi.h>
+#include <WiFiMulti.h>
+#include "wifi.h"
 
 Servo myServo;
+WiFiServer server(80);
 
-const int servoPin = 18;
-const int btn1Pin = 21;
-const int btn2Pin = 34;
+const uint8_t servoPin = 18;
+const uint8_t btn1Pin = 21;
+const uint8_t btn2Pin = 34;
+const uint8_t ledBuiltinPin = 2;
 
 void setup() {
   // Attach the servo to the specified pin
@@ -14,9 +19,23 @@ void setup() {
   // Assign button pins as input
   pinMode(btn1Pin, INPUT);
   pinMode(btn2Pin, INPUT);
-  
+  pinMode(ledBuiltinPin, OUTPUT);
+  digitalWrite(ledBuiltinPin, HIGH);
   // Initialize serial communication for debugging
   Serial.begin(115200);
+
+  Serial.print("Connecting to ");
+  Serial.println(WIFI_SSID);
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  //digitalWrite(ledBuiltinPin, WiFi.status() != WL_CONNECTED);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(1000);
+    Serial.print(".");
+  }
+  Serial.println("");
+  Serial.println("WiFi connected");
+  Serial.println("IP address: ");
+  Serial.println(WiFi.localIP());
 }
 
 void loop() {
