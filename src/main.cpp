@@ -1,7 +1,7 @@
 #include <Arduino.h>
 #include <ESP32Servo.h>
 #include <ESPAsyncWebServer.h>
-#include <LittleFS.h>
+//#include <LittleFS.h>
 #include <WiFi.h>
 #include <AsyncTCP.h>
 #include "wifi-config.h"
@@ -74,9 +74,9 @@ void setup() {
   server.on("/rotate", HTTP_POST, [](AsyncWebServerRequest *request){
       String direction;
       if (state == WIN_TRANSITION_CLOSE || state == WIN_TRANSITION_OPEN) {
-        request->send(403, "text/plain", "Cannot control encoder" + state);
+        request->send(403, "text/plain", "Cannot control encoder, current state: " + String(state));
         return;
-      }
+    }
 
       if (request->hasParam(PARAM_DIRECTION, true)) {
           direction = request->getParam(PARAM_DIRECTION, true)->value();
@@ -105,10 +105,9 @@ void setup() {
   server.on("/curtain", HTTP_POST, [](AsyncWebServerRequest *request){
       String direction;
       if (state == WIN_TRANSITION_CLOSE || state == WIN_TRANSITION_OPEN) {
-        request->send(403, "text/plain", "Cannot control encoder" + state);
-        Serial.print(state);
+        request->send(403, "text/plain", "Cannot control encoder, current state: " + String(state));
         return;
-      }
+    }
 
       if (request->hasParam(PARAM_DIRECTION, true)) {
           direction = request->getParam(PARAM_DIRECTION, true)->value();
