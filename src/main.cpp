@@ -123,6 +123,7 @@ void setup() {
       Serial.printf("WiFi Failed!\n");
       return;
   }
+  WiFi.setAutoReconnect(true);
 
   Serial.print("IP Address: ");
   Serial.println(WiFi.localIP());
@@ -168,6 +169,7 @@ void loop() {
             flag = true;
         }
     }
+    digitalWrite(ledBuiltinPin, WiFi.isConnected());
 }
 
 // void loop() {
