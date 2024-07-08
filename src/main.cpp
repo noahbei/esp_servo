@@ -24,6 +24,8 @@ enum windowState {
 };
 windowState state = WIN_CLOSED;
 
+//uint16_t interval = 1000;
+
 void notFound(AsyncWebServerRequest *request) {
     request->send(404, "text/plain", "Not found");
 }
@@ -138,18 +140,33 @@ void setup() {
   server.begin();
 }
 
+unsigned long lastActionTime = 0;
+const unsigned long interval = 1300; // time it takes for 2.5 rotations
+bool flag = true;
 void loop() {
     if (state == WIN_TRANSITION_CLOSE) {
-        myServo.write(0);
-        delay(1000);
-        myServo.write(92);
-        state = WIN_CLOSED;
+        if (flag) {
+            myServo.write(0);
+            lastActionTime = millis();
+            flag = false;
+        }
+        if (millis() - lastActionTime > interval) {
+            myServo.write(92);
+            state = WIN_CLOSED;
+            flag = true;
+        }
     }
     else if (state == WIN_TRANSITION_OPEN) {
-        myServo.write(180);
-        delay(1000);
-        myServo.write(92);
-        state = WIN_OPEN;
+        if (flag) {
+            myServo.write(180);
+            lastActionTime = millis();
+            flag = false;
+        }
+        if (millis() - lastActionTime > interval) {
+            myServo.write(92);
+            state = WIN_OPEN;
+            flag = true;
+        }
     }
 }
 
