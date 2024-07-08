@@ -75,6 +75,10 @@ void setup() {
             Serial.println("Turning counterclockwise");
             myServo.write(0);
           }
+          else if (direction == "stop") {
+             Serial.println("stopping");
+             myServo.write(92);
+          }
       } else {
           direction = "Invalid Direction";
       }
@@ -87,25 +91,21 @@ void setup() {
 }
 
 void loop() {
-
+  // Read button states
+  int btn1State = digitalRead(btn1Pin);
+  int btn2State = digitalRead(btn2Pin);
+  
+  // Control servo based on button states
+  if (btn1State == HIGH) {
+    Serial.println("Turning counterclockwise");
+    myServo.write(0); // Set servo to counterclockwise direction
+  } else if (btn2State == HIGH) { 
+    Serial.println("Turning clockwise");
+    myServo.write(180); // Set servo to clockwise direction
+  } else {
+    //Serial.println("Stopping");
+    //myServo.write(92); // Stop servo at midpoint
+  }
+  
+  delay(50); // Delay to debounce and stabilize readings
 }
-
-// void loop() {
-//   // Read button states
-//   int btn1State = digitalRead(btn1Pin);
-//   int btn2State = digitalRead(btn2Pin);
-  
-//   // Control servo based on button states
-//   if (btn1State == HIGH) {
-//     Serial.println("Turning counterclockwise");
-//     myServo.write(0); // Set servo to counterclockwise direction
-//   } else if (btn2State == HIGH) { 
-//     Serial.println("Turning clockwise");
-//     myServo.write(180); // Set servo to clockwise direction
-//   } else {
-//     //Serial.println("Stopping");
-//     myServo.write(92); // Stop servo at midpoint
-//   }
-  
-//   delay(50); // Delay to debounce and stabilize readings
-// }
