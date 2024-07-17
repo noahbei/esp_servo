@@ -118,6 +118,11 @@ void handleStopRequest(AsyncWebServerRequest *request) {
       request->send(200, "text/plain", "Hello, POST: " + direction);
 }
 
+void handleGetStatusRequest(AsyncWebServerRequest *request) {
+    String status = (state == WIN_OPEN) ? "open" : "closed";
+    request->send(200, "application/json", "{\"status\": \"" + status + "\"}");
+}
+
 void setup() {
   // Attach the servo to the specified pin
   myServo.attach(servoPin);
@@ -154,6 +159,7 @@ void setup() {
   server.on("/rotate", HTTP_POST, handleRotateRequest);
   server.on("/curtain", HTTP_POST, handleCurtainRequest);
   server.on("/stop", HTTP_POST, handleStopRequest);
+  server.on("/status", HTTP_GET, handleGetStatusRequest);
 
   server.onNotFound(notFound);
 
