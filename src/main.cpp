@@ -100,6 +100,24 @@ void handleRotateRequest(AsyncWebServerRequest *request) {
       request->send(200, "text/plain", "Hello, POST: " + direction);
 }
 
+void handleStopRequest(AsyncWebServerRequest *request) {
+    String direction;
+
+      if (request->hasParam(PARAM_DIRECTION, true)) {
+          direction = request->getParam(PARAM_DIRECTION, true)->value();
+          if (direction == "stop") {
+             Serial.println("stopping");
+             myServo.write(92);
+          }
+          else {
+            direction = "Invalid Direction";
+          }
+      } else {
+          direction = "Invalid Direction";
+      }
+      request->send(200, "text/plain", "Hello, POST: " + direction);
+}
+
 void setup() {
   // Attach the servo to the specified pin
   myServo.attach(servoPin);
@@ -135,6 +153,7 @@ void setup() {
   //server.on("/get", HTTP_GET, handleGetRequest);
   server.on("/rotate", HTTP_POST, handleRotateRequest);
   server.on("/curtain", HTTP_POST, handleCurtainRequest);
+  server.on("/stop", HTTP_POST, handleStopRequest);
 
   server.onNotFound(notFound);
 
@@ -142,7 +161,7 @@ void setup() {
 }
 
 unsigned long lastActionTime = 0;
-const unsigned long interval = 1300; // time it takes for 2.5 rotations
+const unsigned long interval = 1300; // time it takes for 2.5 rotations at maximum speed
 bool flag = true;
 void loop() {
     if (state == WIN_TRANSITION_CLOSE) {
