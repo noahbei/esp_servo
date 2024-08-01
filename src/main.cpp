@@ -1,10 +1,11 @@
 #include <Arduino.h>
 #include <ESP32Servo.h>
 #include <ESPAsyncWebServer.h>
-//#include <LittleFS.h>
 #include <WiFi.h>
 #include <AsyncTCP.h>
+#include "main.h"
 #include "wifi-config.h"
+#include "ServoController.h"
 
 Servo myServo;
 AsyncWebServer server(80);
@@ -24,6 +25,7 @@ enum windowState {
 };
 windowState state = WIN_CLOSED;
 
+const int maxRotationInterval[] = {0, 900}; //max rotation range in degrees
 //uint16_t interval = 1000;
 
 void notFound(AsyncWebServerRequest *request) {
@@ -42,7 +44,7 @@ void notFound(AsyncWebServerRequest *request) {
 //     request->send(200, "text/plain", "Hello, GET: " + message);
 // }
 
-// Send a POST request to <IP>/rotate with a form field message set to direction
+// Send a POST request to <IP>/curtain with a form field message set to direction
 void handleCurtainRequest(AsyncWebServerRequest *request) {
       String direction;
       if (state == WIN_TRANSITION_CLOSE || state == WIN_TRANSITION_OPEN) {
@@ -135,6 +137,8 @@ void setup() {
   // Initialize serial communication for debugging
   Serial.begin(115200);
 
+  setupServo(maxRotationInterval, sizeof(maxRotationInterval) / sizeof(maxRotationInterval[0]));
+
 // if (!LittleFS.begin()) {
 //     Serial.println("An error has occurred while mounting LittleFS");
 //     return;
@@ -166,21 +170,18 @@ void setup() {
   server.begin();
 }
 
-unsigned long lastActionTime = 0;
-const unsigned long interval = 1300; // time it takes for 2.5 rotations at maximum speed
 bool flag = true;
 void loop() {
     if (state == WIN_TRANSITION_CLOSE) {
-        if (flag) {
-            myServo.write(0);
-            lastActionTime = millis();
-            flag = false;
-        }
-        if (millis() - lastActionTime > interval) {
-            myServo.write(92);
-            state = WIN_CLOSED;
-            flag = true;
-        }
+      if (flag) {
+        rotateServo(5, 900);
+        flag = false;
+      }
+      
+      if (updateRotation(900) == 1) {
+        state = WIN_CLOSED;
+        flag = true;
+      }
     }
     else if (state == WIN_TRANSITION_OPEN) {
         if (flag) {

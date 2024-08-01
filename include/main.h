@@ -1,0 +1,3 @@
+#define SERVO_ROT_CLOCK 0 
+#define SERVO_ROT_COUNTER 180
+#define SERVO_STOP 92
