@@ -221,11 +221,11 @@ void loop() {
       }
     }
     else if (rotState) {
-      if (globalAngle >= maxRotationInterval[1] && rotState == ROT_LEFT) {
+      if (globalAngle >= maxRotationInterval[1] - margin && rotState == ROT_LEFT) {
         myServo.write(92);
         rotState = STOP;
       }
-      else if (globalAngle <= maxRotationInterval[0]  && rotState == ROT_RIGHT) {
+      else if (globalAngle <= maxRotationInterval[0] + margin && rotState == ROT_RIGHT) {
         myServo.write(92);
         rotState = STOP;
       }
