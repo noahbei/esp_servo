@@ -46,13 +46,17 @@ void setupEncoder()
 
   // here I would get the value from eeprom which would be configured in the initial calibration mode which will be set to not calibrated.
   // update calibrated bit in eeprom?
-  ReadRawAngle(); //make a reading so the degAngle gets updated
-  startAngle = degAngle; //update startAngle with degAngle - for taring
+  resetPosition();
 
   Serial.println("Welcome!"); //print a welcome message  
   Serial.println("AS5600"); //print a welcome message
   delay(3000);
   OLEDTimer = millis(); //start the timer
+}
+
+void resetPosition() {
+  ReadRawAngle(); //make a reading so the degAngle gets updated
+  startAngle = degAngle; //update startAngle with degAngle - for taring
 }
 
 float updateRotation() {

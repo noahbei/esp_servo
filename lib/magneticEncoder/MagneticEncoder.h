@@ -9,6 +9,7 @@ void ReadRawAngle();
 void correctAngle();
 void checkQuadrant();
 void refreshDisplay();
+void resetPosition();
 
 // main driving functions
 void setupEncoder();

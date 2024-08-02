@@ -24,6 +24,7 @@ enum windowState {
     WIN_TRANSITION_OPEN
 };
 windowState state = WIN_CLOSED;
+bool isRotating = false;
 
 float globalAngle = 0;
 const int maxRotationInterval[] = {0, 900}; //max rotation range in degrees
@@ -85,10 +86,12 @@ void handleRotateRequest(AsyncWebServerRequest *request) {
           direction = request->getParam(PARAM_DIRECTION, true)->value();
           if (direction == "clockwise") {
             Serial.println("Turning clockwise");
+            isRotating = true;
             myServo.write(100);
           }
           else if (direction == "counterclockwise") {
             Serial.println("Turning counterclockwise");
+            isRotating = true;
             myServo.write(80);
           }
           else if (direction == "stop") {
@@ -111,6 +114,7 @@ void handleStopRequest(AsyncWebServerRequest *request) {
           direction = request->getParam(PARAM_DIRECTION, true)->value();
           if (direction == "stop") {
              Serial.println("stopping");
+             isRotating = false;
              myServo.write(92);
           }
           else {
@@ -120,6 +124,12 @@ void handleStopRequest(AsyncWebServerRequest *request) {
           direction = "Invalid Direction";
       }
       request->send(200, "text/plain", "Hello, POST: " + direction);
+}
+
+void handleResetRequest(AsyncWebServerRequest *request) {
+    Serial.println("position reset");
+    resetPosition();
+    request->send(200, "text/plain", "Position Reset");
 }
 
 void handleGetStatusRequest(AsyncWebServerRequest *request) {
@@ -160,6 +170,7 @@ void setup() {
   server.on("/rotate", HTTP_POST, handleRotateRequest);
   server.on("/curtain", HTTP_POST, handleCurtainRequest);
   server.on("/stop", HTTP_POST, handleStopRequest);
+  server.on("/resetPosition", HTTP_POST, handleResetRequest);
   server.on("/status", HTTP_GET, handleGetStatusRequest);
 
   server.onNotFound(notFound);
@@ -198,9 +209,19 @@ void loop() {
       
       if (globalAngle <= maxRotationInterval[0] + margin) {
         myServo.write(92);
-        state = WIN_CLOSED;
+        state = WIN_OPEN;
         flag = true;
+      }
     }
+    else if (isRotating) {
+      if (globalAngle >= maxRotationInterval[1]) {
+        myServo.write(92);
+        isRotating = false;
+      }
+      else if (globalAngle <= maxRotationInterval[0]) {
+        myServo.write(92);
+        isRotating = false;
+      }
     }
     digitalWrite(ledBuiltinPin, WiFi.isConnected());
 }
