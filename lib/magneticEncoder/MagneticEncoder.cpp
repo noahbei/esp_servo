@@ -1,4 +1,4 @@
-#include "ServoController.h"
+#include "MagneticEncoder.h"
 #include <Arduino.h>
 #include <Wire.h>
 #include <ESP32Servo.h>
@@ -7,8 +7,9 @@ void rotateServo();
 int mapValueToRange(int userSpeed, int range[2]);
 void rotateServo(int speed, int degrees);
 
-Servo myServo;
-const uint8_t servoPin = 4;
+//Servo myServo;
+//const uint8_t servoPin = 4;
+// ranges for servo motor
 struct Range {
     int clockwise[2];
     int stop[2];
@@ -37,48 +38,43 @@ float previoustotalAngle = 0; //for the display printing
 const int* maxRotationInterval = nullptr;
 size_t maxRotationIntervalSize = 0;
 
-void setupServo(const int* interval, size_t size)
+void setupEncoder()
 {
-  //set the max rotation interval so that all the other functions have access to it
-  maxRotationInterval = interval;
-  maxRotationIntervalSize = size;
-
   //Serial.begin(115200); //start serial - tip: don't use serial if you don't need it (speed considerations)
-  Wire.begin(sdaPin, sclPin); //start i2C  
+  Wire.begin(SDA_PIN, SCL_PIN); //start i2C  
   Wire.setClock(800000L); //fast clock
 
   // here I would get the value from eeprom which would be configured in the initial calibration mode which will be set to not calibrated.
   // update calibrated bit in eeprom?
   ReadRawAngle(); //make a reading so the degAngle gets updated
   startAngle = degAngle; //update startAngle with degAngle - for taring
-  //startAngle = 90;
 
   Serial.println("Welcome!"); //print a welcome message  
   Serial.println("AS5600"); //print a welcome message
   delay(3000);
   OLEDTimer = millis(); //start the timer
-
-  myServo.attach(servoPin);
-  delay(1000);
-  rotateServo(5, 100);
 }
 
-int updateRotation(float deg) {
+float updateRotation() {
     ReadRawAngle(); //ask the value from the sensor
     correctAngle(); //tare the value
     checkQuadrant(); //check quadrant, check rotations, check absolute angular position
-    refreshDisplay();
+    //refreshDisplay();
+
     //delay(100); //wait a little - adjust it for "better resolution"
     //100 is the degrees that we set when we start the rotation
-    if (totalAngle < maxRotationInterval[0] || totalAngle > maxRotationInterval[1]) {
-        myServo.write(ranges.stop[0]);
-        return 1;
-    }
-    if (totalAngle > deg) {
-        myServo.write(ranges.stop[0]);
-        return 1;
-    }
-  return 0;
+    // if (totalAngle < maxRotationInterval[0] || totalAngle > maxRotationInterval[1]) {
+    //     myServo.write(ranges.stop[0]);
+    //     return 1;
+    // }
+    // if (totalAngle > deg) {
+    //     myServo.write(ranges.stop[0]);
+    //     return 1;
+    // }
+    //delay(100);
+    Serial.print("angle: ");
+    Serial.println(totalAngle);
+    return totalAngle;
 }
 
 void ReadRawAngle()
@@ -222,41 +218,45 @@ void refreshDisplay()
   //when there is a 0.08 change in the angle (sometimes the sensor reads uncertain values)
 }
 
-/**
- * @brief rotates the servo
- * 
- * Detailed explanation of what the function does. You can explain the 
- * overall behavior, any side effects, or important details.
- * 
- * @param speed speed should be between 1 - 50 (may change range if some low values don't move servo)
- * @param direction direction should be between
- * @return 1 if this returns ok, 0 if error occurred
- */
-void rotateServo(int speed) {
+// /**
+//  * @brief rotates the servo
+//  * 
+//  * Detailed explanation of what the function does. You can explain the 
+//  * overall behavior, any side effects, or important details.
+//  * 
+//  * @param speed speed should be between 1 - 50 (may change range if some low values don't move servo)
+//  * @param direction direction should be between
+//  * @return 1 if this returns ok, 0 if error occurred
+//  */
+// void rotateServo(int speed) {
 
-  myServo.write(speed);
-}
+//   myServo.write(speed);
+// }
 
-void rotateServo(int speed, int degrees) {
-  bool direction = degrees > totalAngle;
-  speed = mapValueToRange(speed, direction ? ranges.clockwise : ranges.counter);
-  myServo.write(speed);
-  if (totalAngle > degrees) {
-    myServo.write(ranges.stop[0]);
-  }
-}
+// void rotateServo(int speed, int degrees) {
+//   bool direction = degrees > totalAngle;
+//   speed = mapValueToRange(speed, direction ? ranges.clockwise : ranges.counter);
+//   myServo.write(speed);
+//   if (totalAngle > degrees) {
+//     myServo.write(ranges.stop[0]);
+//   }
+// }
 
-int mapValueToRange(int userSpeed, int range[2]) {
-    int minInput = 1;
-    int maxInput = 50;
+// int mapValueToRange(int userSpeed, int range[2]) {
+//     int minInput = 1;
+//     int maxInput = 50;
 
-    int minRange = range[0];
-    int maxRange = range[1];
+//     int minRange = range[0];
+//     int maxRange = range[1];
 
-    // Ensure userSpeed is within the input range
-    if (userSpeed < minInput) userSpeed = minInput;
-    if (userSpeed > maxInput) userSpeed = maxInput;
+//     // Ensure userSpeed is within the input range
+//     if (userSpeed < minInput) userSpeed = minInput;
+//     if (userSpeed > maxInput) userSpeed = maxInput;
     
-    // Linear mapping formula
-    return (int)(((float)(userSpeed - minInput) / (maxInput - minInput)) * (maxRange - minRange) + minRange);
-}
+//     // Linear mapping formula
+//     return (int)(((float)(userSpeed - minInput) / (maxInput - minInput)) * (maxRange - minRange) + minRange);
+// }
+
+// void ServoWrite(int degree) {
+//     myServo.write(degree);
+// }

@@ -5,12 +5,12 @@
 #include <AsyncTCP.h>
 #include "main.h"
 #include "wifi-config.h"
-#include "ServoController.h"
+#include "MagneticEncoder.h"
 
 Servo myServo;
 AsyncWebServer server(80);
 
-const uint8_t servoPin = 18;
+const uint8_t servoPin = 4;
 const uint8_t btn1Pin = 21;
 const uint8_t btn2Pin = 34;
 const uint8_t ledBuiltinPin = 2;
@@ -25,7 +25,9 @@ enum windowState {
 };
 windowState state = WIN_CLOSED;
 
+float globalAngle = 0;
 const int maxRotationInterval[] = {0, 900}; //max rotation range in degrees
+const int margin = 20;
 //uint16_t interval = 1000;
 
 void notFound(AsyncWebServerRequest *request) {
@@ -83,11 +85,11 @@ void handleRotateRequest(AsyncWebServerRequest *request) {
           direction = request->getParam(PARAM_DIRECTION, true)->value();
           if (direction == "clockwise") {
             Serial.println("Turning clockwise");
-            myServo.write(180);
+            myServo.write(100);
           }
           else if (direction == "counterclockwise") {
             Serial.println("Turning counterclockwise");
-            myServo.write(0);
+            myServo.write(80);
           }
           else if (direction == "stop") {
              Serial.println("stopping");
@@ -129,7 +131,7 @@ void setup() {
   // Attach the servo to the specified pin
   myServo.attach(servoPin);
   
-  // Assign button pins as input
+  // Assign button pins as input, led as output
   pinMode(btn1Pin, INPUT);
   pinMode(btn2Pin, INPUT);
   pinMode(ledBuiltinPin, OUTPUT);
@@ -137,12 +139,7 @@ void setup() {
   // Initialize serial communication for debugging
   Serial.begin(115200);
 
-  setupServo(maxRotationInterval, sizeof(maxRotationInterval) / sizeof(maxRotationInterval[0]));
-
-// if (!LittleFS.begin()) {
-//     Serial.println("An error has occurred while mounting LittleFS");
-//     return;
-//   }
+  setupEncoder();
   
   WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
@@ -172,28 +169,38 @@ void setup() {
 
 bool flag = true;
 void loop() {
+    globalAngle = updateRotation();
+    // if (millis() % 1000 == 0) {
+    //   Serial.print("angle: ");
+    //   Serial.println(globalAngle);
+    // }
+      
+      
     if (state == WIN_TRANSITION_CLOSE) {
       if (flag) {
-        rotateServo(5, 900);
+        //clock
+        myServo.write(80);
         flag = false;
       }
       
-      if (updateRotation(900) == 1) {
+      if (globalAngle >= maxRotationInterval[1] - margin) {
+        myServo.write(92);
         state = WIN_CLOSED;
         flag = true;
       }
     }
     else if (state == WIN_TRANSITION_OPEN) {
-        if (flag) {
-            myServo.write(180);
-            lastActionTime = millis();
-            flag = false;
-        }
-        if (millis() - lastActionTime > interval) {
-            myServo.write(92);
-            state = WIN_OPEN;
-            flag = true;
-        }
+      if (flag) {
+        //counter
+          myServo.write(100);
+          flag = false;
+      }
+      
+      if (globalAngle <= maxRotationInterval[0] + margin) {
+        myServo.write(92);
+        state = WIN_CLOSED;
+        flag = true;
+    }
     }
     digitalWrite(ledBuiltinPin, WiFi.isConnected());
 }
