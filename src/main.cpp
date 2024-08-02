@@ -23,8 +23,14 @@ enum windowState {
     WIN_TRANSITION_CLOSE,
     WIN_TRANSITION_OPEN
 };
+// open state could potentially be updated when we are between the marging and edge of max rotation interval.
 windowState state = WIN_CLOSED;
-bool isRotating = false;
+enum rotationState {
+    STOP = 0,
+    ROT_LEFT,
+    ROT_RIGHT
+};
+rotationState rotState = STOP;
 
 float globalAngle = 0;
 const int maxRotationInterval[] = {0, 900}; //max rotation range in degrees
@@ -86,16 +92,17 @@ void handleRotateRequest(AsyncWebServerRequest *request) {
           direction = request->getParam(PARAM_DIRECTION, true)->value();
           if (direction == "clockwise") {
             Serial.println("Turning clockwise");
-            isRotating = true;
+            rotState = ROT_RIGHT;
             myServo.write(100);
           }
           else if (direction == "counterclockwise") {
             Serial.println("Turning counterclockwise");
-            isRotating = true;
+            rotState = ROT_LEFT;
             myServo.write(80);
           }
           else if (direction == "stop") {
              Serial.println("stopping");
+             rotState = STOP;
              myServo.write(92);
           }
           else {
@@ -114,7 +121,7 @@ void handleStopRequest(AsyncWebServerRequest *request) {
           direction = request->getParam(PARAM_DIRECTION, true)->value();
           if (direction == "stop") {
              Serial.println("stopping");
-             isRotating = false;
+             rotState = STOP;
              myServo.write(92);
           }
           else {
@@ -213,14 +220,14 @@ void loop() {
         flag = true;
       }
     }
-    else if (isRotating) {
-      if (globalAngle >= maxRotationInterval[1]) {
+    else if (rotState) {
+      if (globalAngle >= maxRotationInterval[1] && rotState == ROT_LEFT) {
         myServo.write(92);
-        isRotating = false;
+        rotState = STOP;
       }
-      else if (globalAngle <= maxRotationInterval[0]) {
+      else if (globalAngle <= maxRotationInterval[0]  && rotState == ROT_RIGHT) {
         myServo.write(92);
-        isRotating = false;
+        rotState = STOP;
       }
     }
     digitalWrite(ledBuiltinPin, WiFi.isConnected());
