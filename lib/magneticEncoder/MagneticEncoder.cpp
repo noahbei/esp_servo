@@ -2,6 +2,12 @@
 #include <Arduino.h>
 #include <Wire.h>
 #include <ESP32Servo.h>
+#include <SSD1306Ascii.h>
+#include <SSD1306AsciiWire.h>
+#ifdef GENERAL_ANGLE
+#include <math.h>
+const float tolerance = 2.0;
+#endif  
 
 void rotateServo();
 int mapValueToRange(int userSpeed, int range[2]);
@@ -22,6 +28,7 @@ Range ranges = {
     {97, 180}
 };
 
+SSD1306AsciiWire oled;
 float OLEDTimer = 0;
 
 int lowbyte; //raw angle 7:0
@@ -48,8 +55,18 @@ void setupEncoder()
   // update calibrated bit in eeprom?
   resetPosition();
 
-  Serial.println("Welcome!"); //print a welcome message  
-  Serial.println("AS5600"); //print a welcome message
+  #if RST_PIN >= 0
+  	oled.begin(&Adafruit128x64, OLED_ADDR, RST_PIN);
+  #else // RST_PIN >= 0
+  	oled.begin(&Adafruit128x64, OLED_ADDR);
+  #endif // RST_PIN >= 0
+
+  oled.setFont(Adafruit5x7);
+	oled.clear(); //clear display
+	oled.set2X(); //double-line font size - better to read it
+
+  oled.println("Welcome!"); //print a welcome message  
+  oled.println("AS5600"); //print a welcome message
   delay(3000);
   OLEDTimer = millis(); //start the timer
 }
@@ -63,7 +80,7 @@ float updateRotation() {
     ReadRawAngle(); //ask the value from the sensor
     correctAngle(); //tare the value
     checkQuadrant(); //check quadrant, check rotations, check absolute angular position
-    //refreshDisplay();
+    refreshDisplay();
 
     //delay(100); //wait a little - adjust it for "better resolution"
     //100 is the degrees that we set when we start the rotation
@@ -76,8 +93,8 @@ float updateRotation() {
     //     return 1;
     // }
     //delay(100);
-    Serial.print("angle: ");
-    Serial.println(totalAngle);
+    // Serial.print("angle: ");
+    // Serial.println(totalAngle);
     return totalAngle;
 }
 
@@ -206,12 +223,16 @@ void refreshDisplay()
 {
   if (millis() - OLEDTimer > 100) //chech if we will update at every 100 ms
 	{ 
-    if(totalAngle != previoustotalAngle) //if there's a change in the position*
+#ifdef GENERAL_ANGLE
+    if(fabs(totalAngle - previoustotalAngle) >= tolerance) //if there's a change in the position*
+#else
+    if(totalAngle != previoustotalAngle)
+#endif
     {
-        
-        Serial.println(totalAngle); //print the new absolute position
-        OLEDTimer = millis(); //reset timer 	
-        previoustotalAngle = totalAngle; //update the previous value
+      oled.clear(); //delete the content of the display
+      oled.println(totalAngle); //print the new absolute position
+      OLEDTimer = millis(); //reset timer 	
+      previoustotalAngle = totalAngle; //update the previous value
     }
 	}
 	else
