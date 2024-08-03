@@ -93,17 +93,17 @@ void handleRotateRequest(AsyncWebServerRequest *request) {
           if (direction == "clockwise") {
             Serial.println("Turning clockwise");
             rotState = ROT_RIGHT;
-            myServo.write(100);
+            myServo.write(SERVO_ROT_COUNTER);
           }
           else if (direction == "counterclockwise") {
             Serial.println("Turning counterclockwise");
             rotState = ROT_LEFT;
-            myServo.write(80);
+            myServo.write(SERVO_ROT_CLOCK);
           }
           else if (direction == "stop") {
              Serial.println("stopping");
              rotState = STOP;
-             myServo.write(92);
+             myServo.write(SERVO_STOP);
           }
           else {
             direction = "Invalid Direction";
@@ -122,7 +122,7 @@ void handleStopRequest(AsyncWebServerRequest *request) {
           if (direction == "stop") {
              Serial.println("stopping");
              rotState = STOP;
-             myServo.write(92);
+             myServo.write(SERVO_STOP);
           }
           else {
             direction = "Invalid Direction";
@@ -197,12 +197,12 @@ void loop() {
     if (state == WIN_TRANSITION_CLOSE) {
       if (flag) {
         //clock
-        myServo.write(80);
+        myServo.write(SERVO_ROT_CLOCK);
         flag = false;
       }
       
       if (globalAngle >= maxRotationInterval[1] - margin) {
-        myServo.write(92);
+        myServo.write(SERVO_STOP);
         state = WIN_CLOSED;
         flag = true;
       }
@@ -210,23 +210,23 @@ void loop() {
     else if (state == WIN_TRANSITION_OPEN) {
       if (flag) {
         //counter
-          myServo.write(100);
+          myServo.write(SERVO_ROT_COUNTER);
           flag = false;
       }
       
       if (globalAngle <= maxRotationInterval[0] + margin) {
-        myServo.write(92);
+        myServo.write(SERVO_STOP);
         state = WIN_OPEN;
         flag = true;
       }
     }
     else if (rotState) {
       if (globalAngle >= maxRotationInterval[1] - margin && rotState == ROT_LEFT) {
-        myServo.write(92);
+        myServo.write(SERVO_STOP);
         rotState = STOP;
       }
       else if (globalAngle <= maxRotationInterval[0] + margin && rotState == ROT_RIGHT) {
-        myServo.write(92);
+        myServo.write(SERVO_STOP);
         rotState = STOP;
       }
     }
