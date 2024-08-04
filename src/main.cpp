@@ -33,7 +33,6 @@ rotationState rotState = STOP;
 
 float globalAngle = 0;
 const int maxRotationInterval[] = {0, 900}; // max rotation range in degrees
-// uint16_t interval = 1000;
 
 void setup()
 {
@@ -47,6 +46,7 @@ void setup()
   button2.begin();
   wifiSetup();
 
+  // endpoint initialization
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
             { request->send(200, "text/plain", "Hello, world"); });
   server.on("/rotate", HTTP_POST, handleRotateRequest);
@@ -144,7 +144,11 @@ void notFound(AsyncWebServerRequest *request)
   request->send(404, "text/plain", "Not found");
 }
 
-// Send a POST request to <IP>/curtain with a form field message set to direction
+/**
+ * @brief <IP>/curtain route handler
+ * 
+ * Send a POST request to <IP>/curtain with a form field message set to direction
+ */
 void handleCurtainRequest(AsyncWebServerRequest *request)
 {
   String direction;
@@ -179,7 +183,11 @@ void handleCurtainRequest(AsyncWebServerRequest *request)
   request->send(200, "text/plain", "Hello, POST: " + direction);
 }
 
-// Send a POST request to <IP>/rotate with a form field message set to direction
+/**
+ * @brief <IP>/rotate route handler
+ * 
+ * Send a POST request to <IP>/rotate with a form field message set to direction
+ */
 void handleRotateRequest(AsyncWebServerRequest *request)
 {
   String direction;
@@ -222,6 +230,11 @@ void handleRotateRequest(AsyncWebServerRequest *request)
   request->send(200, "text/plain", "Hello, POST: " + direction);
 }
 
+/**
+ * @brief <IP>/stop route handler
+ * 
+ * Send a POST request to <IP>/stop with a form field message set to direction
+ */
 void handleStopRequest(AsyncWebServerRequest *request)
 {
   String direction;
@@ -247,6 +260,11 @@ void handleStopRequest(AsyncWebServerRequest *request)
   request->send(200, "text/plain", "Hello, POST: " + direction);
 }
 
+/**
+ * @brief <IP>/resetPosition route handler
+ * 
+ * Send a POST request to <IP>/resetPosition to re-define the initial 0-offest
+ */
 void handleResetRequest(AsyncWebServerRequest *request)
 {
   Serial.println("position reset");
