@@ -35,3 +35,4 @@ void handleRotateRequest(AsyncWebServerRequest *request);
 void handleStopRequest(AsyncWebServerRequest *request);
 void handleResetRequest(AsyncWebServerRequest *request);
 void handleGetStatusRequest(AsyncWebServerRequest *request);
+void wifiSetup();
