@@ -230,6 +230,7 @@ void refreshDisplay()
 #endif
     {
       oled.clear(); //delete the content of the display
+      oled.print(" "); //manual offset
       oled.println(totalAngle); //print the new absolute position
       OLEDTimer = millis(); //reset timer 	
       previoustotalAngle = totalAngle; //update the previous value
