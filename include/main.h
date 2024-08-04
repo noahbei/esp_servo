@@ -17,7 +17,7 @@
     #define SERVO_ROT_CLOCK 0 
     #define SERVO_ROT_COUNTER 180
     #define SERVO_STOP 92
-    #define MARGIN 20
+    #define MARGIN 30
 #else
     #error "Invalid SPEED_MODE defined"
 #endif
