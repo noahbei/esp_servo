@@ -37,7 +37,6 @@ rotationState rotState = STOP;
 
 float globalAngle = 0;
 const int maxRotationInterval[] = {0, 900}; //max rotation range in degrees
-const int margin = 20;
 //uint16_t interval = 1000;
 
 void notFound(AsyncWebServerRequest *request) {
@@ -230,7 +229,7 @@ void loop() {
         flag = false;
       }
       
-      if (globalAngle >= maxRotationInterval[1] - margin) {
+      if (globalAngle >= maxRotationInterval[1] - MARGIN) {
         myServo.write(SERVO_STOP);
         state = WIN_CLOSED;
         flag = true;
@@ -243,18 +242,18 @@ void loop() {
           flag = false;
       }
       
-      if (globalAngle <= maxRotationInterval[0] + margin) {
+      if (globalAngle <= maxRotationInterval[0] + MARGIN) {
         myServo.write(SERVO_STOP);
         state = WIN_OPEN;
         flag = true;
       }
     }
     else if (rotState) {
-      if (globalAngle >= maxRotationInterval[1] - margin && rotState == ROT_LEFT) {
+      if (globalAngle >= maxRotationInterval[1] - MARGIN && rotState == ROT_LEFT) {
         myServo.write(SERVO_STOP);
         rotState = STOP;
       }
-      else if (globalAngle <= maxRotationInterval[0] + margin && rotState == ROT_RIGHT) {
+      else if (globalAngle <= maxRotationInterval[0] + MARGIN && rotState == ROT_RIGHT) {
         myServo.write(SERVO_STOP);
         rotState = STOP;
       }
