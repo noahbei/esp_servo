@@ -3,6 +3,7 @@
 #include <ESPAsyncWebServer.h>
 #include <WiFi.h>
 #include <AsyncTCP.h>
+#include <Button.h>
 #include "main.h"
 #include "wifi-config.h"
 #include "MagneticEncoder.h"
@@ -14,6 +15,8 @@ const uint8_t servoPin = 4;
 const uint8_t btn1Pin = 21;
 const uint8_t btn2Pin = 34;
 const uint8_t ledBuiltinPin = 2;
+Button button1(14);
+Button button2(27);
 
 const char* PARAM_DIRECTION = "direction";
 const char* PARAM_STOP = "stop";
@@ -157,6 +160,9 @@ void setup() {
   Serial.begin(115200);
 
   setupEncoder();
+
+  button1.begin();
+  button2.begin();
   
   WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
@@ -192,7 +198,30 @@ void loop() {
     //   Serial.print("angle: ");
     //   Serial.println(globalAngle);
     // }
+
+    if (button1.pressed()) {
+      rotState = ROT_LEFT;
+      myServo.write(SERVO_ROT_CLOCK);
+      Serial.println("rotleft");
+    }
+    else if (button1.released()) {
+      rotState = STOP;
+      myServo.write(SERVO_STOP);
+      Serial.println("release");
+    }
+    
+    if (button2.pressed()) {
+      rotState = ROT_RIGHT;
+      myServo.write(SERVO_ROT_COUNTER);
+      Serial.println("rotright");
+    }
       
+    else if (button2.released()) {
+      rotState = STOP;
+      myServo.write(SERVO_STOP);
+      Serial.println("release");
+    }
+
       
     if (state == WIN_TRANSITION_CLOSE) {
       if (flag) {
