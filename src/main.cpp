@@ -8,15 +8,11 @@
 #include "wifi-config.h"
 #include "MagneticEncoder.h"
 
+// object definitions
 Servo myServo;
 AsyncWebServer server(80);
-
-const uint8_t servoPin = 4;
-const uint8_t btn1Pin = 21;
-const uint8_t btn2Pin = 34;
-const uint8_t ledBuiltinPin = 2;
-Button button1(14);
-Button button2(27);
+Button button1(btn1Pin);
+Button button2(btn2Pin);
 
 const char* PARAM_DIRECTION = "direction";
 const char* PARAM_STOP = "stop";
@@ -38,6 +34,110 @@ rotationState rotState = STOP;
 float globalAngle = 0;
 const int maxRotationInterval[] = {0, 900}; // max rotation range in degrees
 // uint16_t interval = 1000;
+
+void setup()
+{
+  Serial.begin(115200);
+
+  // peripheral initialization
+  pinMode(ledBuiltinPin, OUTPUT);
+  myServo.attach(servoPin);
+  setupEncoder();
+  button1.begin();
+  button2.begin();
+  wifiSetup();
+
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
+            { request->send(200, "text/plain", "Hello, world"); });
+  server.on("/rotate", HTTP_POST, handleRotateRequest);
+  server.on("/curtain", HTTP_POST, handleCurtainRequest);
+  server.on("/stop", HTTP_POST, handleStopRequest);
+  server.on("/resetPosition", HTTP_POST, handleResetRequest);
+  server.on("/status", HTTP_GET, handleGetStatusRequest);
+
+  server.onNotFound(notFound);
+  server.begin();
+}
+
+bool flag = true;
+void loop()
+{
+  globalAngle = updateRotation();
+
+  if (button1.pressed())
+  {
+    rotState = ROT_LEFT;
+    myServo.write(SERVO_ROT_CLOCK);
+    Serial.println("rotleft");
+  }
+  else if (button1.released())
+  {
+    rotState = STOP;
+    myServo.write(SERVO_STOP);
+    Serial.println("release");
+  }
+
+  if (button2.pressed())
+  {
+    rotState = ROT_RIGHT;
+    myServo.write(SERVO_ROT_COUNTER);
+    Serial.println("rotright");
+  }
+
+  else if (button2.released())
+  {
+    rotState = STOP;
+    myServo.write(SERVO_STOP);
+    Serial.println("release");
+  }
+
+  if (state == WIN_TRANSITION_CLOSE)
+  {
+    if (flag)
+    {
+      // clock
+      myServo.write(SERVO_ROT_CLOCK);
+      flag = false;
+    }
+
+    if (globalAngle >= maxRotationInterval[1] - MARGIN)
+    {
+      myServo.write(SERVO_STOP);
+      state = WIN_CLOSED;
+      flag = true;
+    }
+  }
+  else if (state == WIN_TRANSITION_OPEN)
+  {
+    if (flag)
+    {
+      // counter
+      myServo.write(SERVO_ROT_COUNTER);
+      flag = false;
+    }
+
+    if (globalAngle <= maxRotationInterval[0] + MARGIN)
+    {
+      myServo.write(SERVO_STOP);
+      state = WIN_OPEN;
+      flag = true;
+    }
+  }
+  else if (rotState)
+  {
+    if (globalAngle >= maxRotationInterval[1] - MARGIN && rotState == ROT_LEFT)
+    {
+      myServo.write(SERVO_STOP);
+      rotState = STOP;
+    }
+    else if (globalAngle <= maxRotationInterval[0] + MARGIN && rotState == ROT_RIGHT)
+    {
+      myServo.write(SERVO_STOP);
+      rotState = STOP;
+    }
+  }
+  digitalWrite(ledBuiltinPin, WiFi.isConnected());
+}
 
 void notFound(AsyncWebServerRequest *request)
 {
@@ -160,24 +260,10 @@ void handleGetStatusRequest(AsyncWebServerRequest *request)
   request->send(200, "application/json", "{\"status\": \"" + status + "\"}");
 }
 
-void setup()
-{
-  // Attach the servo to the specified pin
-  myServo.attach(servoPin);
-
-  // Assign button pins as input, led as output
-  pinMode(btn1Pin, INPUT);
-  pinMode(btn2Pin, INPUT);
-  pinMode(ledBuiltinPin, OUTPUT);
-
-  // Initialize serial communication for debugging
-  Serial.begin(115200);
-
-  setupEncoder();
-
-  button1.begin();
-  button2.begin();
-
+/**
+ * @brief tony from the bronx
+ */
+void wifiSetup() {
   WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   if (WiFi.waitForConnectResult() != WL_CONNECTED)
@@ -189,98 +275,4 @@ void setup()
 
   Serial.print("IP Address: ");
   Serial.println(WiFi.localIP());
-
-  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
-            { request->send(200, "text/plain", "Hello, world"); });
-
-  // server.on("/get", HTTP_GET, handleGetRequest);
-  server.on("/rotate", HTTP_POST, handleRotateRequest);
-  server.on("/curtain", HTTP_POST, handleCurtainRequest);
-  server.on("/stop", HTTP_POST, handleStopRequest);
-  server.on("/resetPosition", HTTP_POST, handleResetRequest);
-  server.on("/status", HTTP_GET, handleGetStatusRequest);
-
-  server.onNotFound(notFound);
-
-  server.begin();
-}
-
-bool flag = true;
-void loop()
-{
-  globalAngle = updateRotation();
-
-  if (button1.pressed())
-  {
-    rotState = ROT_LEFT;
-    myServo.write(SERVO_ROT_CLOCK);
-    Serial.println("rotleft");
-  }
-  else if (button1.released())
-  {
-    rotState = STOP;
-    myServo.write(SERVO_STOP);
-    Serial.println("release");
-  }
-
-  if (button2.pressed())
-  {
-    rotState = ROT_RIGHT;
-    myServo.write(SERVO_ROT_COUNTER);
-    Serial.println("rotright");
-  }
-
-  else if (button2.released())
-  {
-    rotState = STOP;
-    myServo.write(SERVO_STOP);
-    Serial.println("release");
-  }
-
-  if (state == WIN_TRANSITION_CLOSE)
-  {
-    if (flag)
-    {
-      // clock
-      myServo.write(SERVO_ROT_CLOCK);
-      flag = false;
-    }
-
-    if (globalAngle >= maxRotationInterval[1] - MARGIN)
-    {
-      myServo.write(SERVO_STOP);
-      state = WIN_CLOSED;
-      flag = true;
-    }
-  }
-  else if (state == WIN_TRANSITION_OPEN)
-  {
-    if (flag)
-    {
-      // counter
-      myServo.write(SERVO_ROT_COUNTER);
-      flag = false;
-    }
-
-    if (globalAngle <= maxRotationInterval[0] + MARGIN)
-    {
-      myServo.write(SERVO_STOP);
-      state = WIN_OPEN;
-      flag = true;
-    }
-  }
-  else if (rotState)
-  {
-    if (globalAngle >= maxRotationInterval[1] - MARGIN && rotState == ROT_LEFT)
-    {
-      myServo.write(SERVO_STOP);
-      rotState = STOP;
-    }
-    else if (globalAngle <= maxRotationInterval[0] + MARGIN && rotState == ROT_RIGHT)
-    {
-      myServo.write(SERVO_STOP);
-      rotState = STOP;
-    }
-  }
-  digitalWrite(ledBuiltinPin, WiFi.isConnected());
 }

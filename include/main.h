@@ -21,3 +21,17 @@
 #else
     #error "Invalid SPEED_MODE defined"
 #endif
+
+// pin defintions
+const uint8_t servoPin = 4;
+const uint8_t btn1Pin = 14;
+const uint8_t btn2Pin = 27;
+const uint8_t ledBuiltinPin = 2;
+
+// function prototypes
+void notFound(AsyncWebServerRequest *request);
+void handleCurtainRequest(AsyncWebServerRequest *request);
+void handleRotateRequest(AsyncWebServerRequest *request);
+void handleStopRequest(AsyncWebServerRequest *request);
+void handleResetRequest(AsyncWebServerRequest *request);
+void handleGetStatusRequest(AsyncWebServerRequest *request);
