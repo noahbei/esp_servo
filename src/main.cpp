@@ -82,30 +82,26 @@ void loop()
   {
     rotationState = WIN_STOP;
   }
-
+  // lock control to rotate open/closed when win_transition_x is active
   switch (rotationState) {
-  case WIN_ROTATE_OPEN:
-    myServo.write(SERVO_ROT_CLOCK);
-    serial.println("rotating open");
-    break;
-  case WIN_ROTATE_CLOSE:
-    myServo.write(SERVO_ROT_COUNTER);
-    serial.println("rotating close");
-    break;
-  case WIN_TRANSITION_OPEN:
-    transitionWindow(0);
-    break;
-  case WIN_TRANSITION_CLOSE:
-    transitionWindow(1);
-    break;
-  case WIN_STOP:
-    myServo.write(SERVO_STOP);
-    Serial.println("rotation stopped");
-    break;
-  default:
-    myServo.write(SERVO_STOP);
-    Serial.println("default behavior: rotation stopped");
-    break;
+    case WIN_TRANSITION_OPEN:
+    case WIN_ROTATE_OPEN:
+      myServo.write(SERVO_ROT_CLOCK);
+      serial.println("rotating open");
+      break;
+    case WIN_TRANSITION_CLOSE:
+    case WIN_ROTATE_CLOSE:
+      myServo.write(SERVO_ROT_COUNTER);
+      serial.println("rotating close");
+      break;
+    case WIN_STOP:
+      myServo.write(SERVO_STOP);
+      Serial.println("rotation stopped");
+      break;
+    default:
+      myServo.write(SERVO_STOP);
+      Serial.println("default behavior: rotation stopped");
+      break;
   }
 
   // if (rotState)
@@ -272,22 +268,4 @@ void wifiSetup() {
 
   Serial.print("IP Address: ");
   Serial.println(WiFi.localIP());
-}
-
-void transitionWindow(windowEndState desiredState) {
-  static bool flag = false;
-  if (flag)
-    {
-      // clock
-      myServo.write(desiredState == OPEN ? SERVO_ROT_CLOCK : SERVO_ROT_COUNTER);
-      flag = false;
-    }
-
-    if (globalAngle >= maxRotationInterval[1] - MARGIN || globalAngle <= maxRotationInterval[0] + MARGIN)
-    {
-      rotationState = WIN_STOP;
-      myServo.write(SERVO_STOP);
-      endState = desiredState; // probably don't have this if I am manually checking if we are at the end or not
-      flag = true;
-    }
 }
