@@ -16,20 +16,22 @@ Button button2(btn2Pin);
 
 const char* PARAM_DIRECTION = "direction";
 const char* PARAM_STOP = "stop";
-enum windowState {
-  WIN_CLOSED = 0,
-  WIN_OPEN,
+enum windowTransitionState {
   WIN_TRANSITION_CLOSE,
-  WIN_TRANSITION_OPEN
+  WIN_TRANSITION_OPEN,
+  WIN_ROTATE_CLOSE,
+  WIN_ROTATE_OPEN,
+  WIN_STOP
 };
+windowTransitionState rotationState = WIN_STOP;
+
+// does this define an end state variable?
+enum windowEndState {
+  OPEN = 0,
+  CLOSE,
+  MIDDLE
+} endState;
 // open state could potentially be updated when we are between the marging and edge of max rotation interval.
-windowState state = WIN_CLOSED;
-enum rotationState {
-  STOP = 0,
-  ROT_LEFT,
-  ROT_RIGHT
-};
-rotationState rotState = STOP;
 
 float globalAngle = 0;
 const int maxRotationInterval[] = {0, 900}; // max rotation range in degrees
@@ -59,84 +61,57 @@ void setup()
   server.begin();
 }
 
-bool flag = true;
 void loop()
 {
+  digitalWrite(ledBuiltinPin, WiFi.isConnected()); // update to only check once every 10 seconds
   globalAngle = updateRotation();
 
-  if (button1.pressed())
-  {
-    rotState = ROT_LEFT;
-    myServo.write(SERVO_ROT_CLOCK);
-    Serial.println("rotleft");
+  // can split this up in a way where overrides makes sense for control
+  // make sure that there isn't something being changed by the post requests before this code
+  if (!(rotationState == WIN_TRANSITION_OPEN || rotationState == WIN_TRANSITION_CLOSE)) {
+    if (button1.pressed()) rotationState = WIN_ROTATE_OPEN;
+    else if (button2.pressed()) rotationState = WIN_ROTATE_CLOSE;
+    else if (button1.released() || button2.released()) rotationState = WIN_STOP;
   }
-  else if (button1.released())
-  {
-    rotState = STOP;
-    myServo.write(SERVO_STOP);
-    Serial.println("release");
-  }
+  else {
 
-  if (button2.pressed())
-  {
-    rotState = ROT_RIGHT;
-    myServo.write(SERVO_ROT_COUNTER);
-    Serial.println("rotright");
   }
-
-  else if (button2.released())
+  // make sure window can't be rotated out of bounds
+  if ((globalAngle >= maxRotationInterval[1] - MARGIN && (rotationState == WIN_ROTATE_OPEN || rotationState == WIN_TRANSITION_OPEN)) ||
+      (globalAngle <= maxRotationInterval[0] + MARGIN && (rotationState == WIN_ROTATE_CLOSE || rotationState == WIN_TRANSITION_CLOSE)))
   {
-    rotState = STOP;
-    myServo.write(SERVO_STOP);
-    Serial.println("release");
+    rotationState = WIN_STOP;
   }
-
-  if (state == WIN_TRANSITION_CLOSE)
-  {
-    if (flag)
-    {
-      // clock
+  // lock control to rotate open/closed when win_transition_x is active
+  switch (rotationState) {
+    case WIN_TRANSITION_OPEN:
+    case WIN_ROTATE_OPEN:
       myServo.write(SERVO_ROT_CLOCK);
-      flag = false;
-    }
-
-    if (globalAngle >= maxRotationInterval[1] - MARGIN)
-    {
-      myServo.write(SERVO_STOP);
-      state = WIN_CLOSED;
-      flag = true;
-    }
-  }
-  else if (state == WIN_TRANSITION_OPEN)
-  {
-    if (flag)
-    {
-      // counter
+      Serial.println("rotating open");
+      break;
+    case WIN_TRANSITION_CLOSE:
+    case WIN_ROTATE_CLOSE:
       myServo.write(SERVO_ROT_COUNTER);
-      flag = false;
-    }
+      Serial.println("rotating close");
+      break;
+    case WIN_STOP:
+      myServo.write(SERVO_STOP);
+      Serial.println("rotation stopped");
+      break;
+    default:
+      myServo.write(SERVO_STOP);
+      Serial.println("default behavior: rotation stopped");
+      break;
+  }
 
-    if (globalAngle <= maxRotationInterval[0] + MARGIN)
-    {
-      myServo.write(SERVO_STOP);
-      state = WIN_OPEN;
-      flag = true;
-    }
-  }
-  else if (rotState)
-  {
-    if (globalAngle >= maxRotationInterval[1] - MARGIN && rotState == ROT_LEFT)
-    {
-      myServo.write(SERVO_STOP);
-      rotState = STOP;
-    }
-    else if (globalAngle <= maxRotationInterval[0] + MARGIN && rotState == ROT_RIGHT)
-    {
-      myServo.write(SERVO_STOP);
-      rotState = STOP;
-    }
-  }
-  digitalWrite(ledBuiltinPin, WiFi.isConnected());
+  // if (rotState)
+  // {
+  //   if ((globalAngle >= maxRotationInterval[1] - MARGIN && rotState == ROT_LEFT) || (globalAngle <= maxRotationInterval[0] + MARGIN && rotState == ROT_RIGHT))
+  //   {
+  //     myServo.write(SERVO_STOP);
+  //     rotState = STOP;
+  //   }
+  // }
 }
 
 void notFound(AsyncWebServerRequest *request)
@@ -152,9 +127,9 @@ void notFound(AsyncWebServerRequest *request)
 void handleCurtainRequest(AsyncWebServerRequest *request)
 {
   String direction;
-  if (state == WIN_TRANSITION_CLOSE || state == WIN_TRANSITION_OPEN)
+  if (rotationState == WIN_TRANSITION_CLOSE || rotationState == WIN_TRANSITION_OPEN)
   {
-    request->send(403, "text/plain", "Cannot control encoder, current state: " + String(state));
+    request->send(403, "text/plain", "Cannot control encoder, current state: " + String(rotationState));
     return;
   }
 
@@ -164,12 +139,12 @@ void handleCurtainRequest(AsyncWebServerRequest *request)
     if (direction == "open")
     {
       Serial.println("Opening Window");
-      state = WIN_TRANSITION_OPEN;
+      rotationState = WIN_TRANSITION_OPEN;
     }
     else if (direction == "close")
     {
       Serial.println("Closing Window");
-      state = WIN_TRANSITION_CLOSE;
+      rotationState = WIN_TRANSITION_CLOSE;
     }
     else
     {
@@ -191,9 +166,9 @@ void handleCurtainRequest(AsyncWebServerRequest *request)
 void handleRotateRequest(AsyncWebServerRequest *request)
 {
   String direction;
-  if (state == WIN_TRANSITION_CLOSE || state == WIN_TRANSITION_OPEN)
+  if (rotationState == WIN_TRANSITION_CLOSE || rotationState == WIN_TRANSITION_OPEN)
   {
-    request->send(403, "text/plain", "Cannot control encoder, current state: " + String(state));
+    request->send(403, "text/plain", "Cannot control encoder, current state: " + String(rotationState));
     return;
   }
 
@@ -203,19 +178,17 @@ void handleRotateRequest(AsyncWebServerRequest *request)
     if (direction == "clockwise")
     {
       Serial.println("Turning clockwise");
-      rotState = ROT_RIGHT;
-      myServo.write(SERVO_ROT_COUNTER);
+      rotationState = WIN_ROTATE_CLOSE;
     }
     else if (direction == "counterclockwise")
     {
       Serial.println("Turning counterclockwise");
-      rotState = ROT_LEFT;
-      myServo.write(SERVO_ROT_CLOCK);
+      rotationState = WIN_ROTATE_OPEN;
     }
     else if (direction == "stop")
     {
       Serial.println("stopping");
-      rotState = STOP;
+      rotationState = WIN_STOP;
       myServo.write(SERVO_STOP);
     }
     else
@@ -245,7 +218,7 @@ void handleStopRequest(AsyncWebServerRequest *request)
     if (direction == "stop")
     {
       Serial.println("stopping");
-      rotState = STOP;
+      rotationState = WIN_STOP;
       myServo.write(SERVO_STOP);
     }
     else
@@ -274,7 +247,7 @@ void handleResetRequest(AsyncWebServerRequest *request)
 
 void handleGetStatusRequest(AsyncWebServerRequest *request)
 {
-  String status = (state == WIN_OPEN) ? "open" : "closed";
+  String status = (endState == OPEN) ? "open" : "closed";
   request->send(200, "application/json", "{\"status\": \"" + status + "\"}");
 }
 
