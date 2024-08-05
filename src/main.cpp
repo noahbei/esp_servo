@@ -24,6 +24,7 @@ enum windowTransitionState {
   WIN_STOP
 };
 windowTransitionState rotationState = WIN_STOP;
+windowTransitionState prevState = WIN_STOP;
 
 // does this define an end state variable?
 enum windowEndState {
@@ -61,13 +62,13 @@ void setup()
   server.begin();
 }
 
+unsigned long previousMillis = 0;
+const long interval = 10000; // 10 seconds
 void loop()
 {
-  digitalWrite(ledBuiltinPin, WiFi.isConnected()); // update to only check once every 10 seconds
   globalAngle = updateRotation();
 
-  // can split this up in a way where overrides makes sense for control
-  // make sure that there isn't something being changed by the post requests before this code
+  // lock control to rotate open/closed when win_transition_x is active
   if (!(rotationState == WIN_TRANSITION_OPEN || rotationState == WIN_TRANSITION_CLOSE)) {
     if (button1.pressed()) rotationState = WIN_ROTATE_OPEN;
     else if (button2.pressed()) rotationState = WIN_ROTATE_CLOSE;
@@ -82,36 +83,36 @@ void loop()
   {
     rotationState = WIN_STOP;
   }
-  // lock control to rotate open/closed when win_transition_x is active
-  switch (rotationState) {
-    case WIN_TRANSITION_OPEN:
-    case WIN_ROTATE_OPEN:
-      myServo.write(SERVO_ROT_CLOCK);
-      Serial.println("rotating open");
-      break;
-    case WIN_TRANSITION_CLOSE:
-    case WIN_ROTATE_CLOSE:
-      myServo.write(SERVO_ROT_COUNTER);
-      Serial.println("rotating close");
-      break;
-    case WIN_STOP:
-      myServo.write(SERVO_STOP);
-      Serial.println("rotation stopped");
-      break;
-    default:
-      myServo.write(SERVO_STOP);
-      Serial.println("default behavior: rotation stopped");
-      break;
-  }
 
-  // if (rotState)
-  // {
-  //   if ((globalAngle >= maxRotationInterval[1] - MARGIN && rotState == ROT_LEFT) || (globalAngle <= maxRotationInterval[0] + MARGIN && rotState == ROT_RIGHT))
-  //   {
-  //     myServo.write(SERVO_STOP);
-  //     rotState = STOP;
-  //   }
-  // }
+  if (prevState != rotationState) {
+    switch (rotationState) {
+      case WIN_TRANSITION_OPEN:
+      case WIN_ROTATE_OPEN:
+        myServo.write(SERVO_ROT_CLOCK);
+        Serial.println("rotating open");
+        break;
+      case WIN_TRANSITION_CLOSE:
+      case WIN_ROTATE_CLOSE:
+        myServo.write(SERVO_ROT_COUNTER);
+        Serial.println("rotating close");
+        break;
+      case WIN_STOP:
+        myServo.write(SERVO_STOP);
+        Serial.println("rotation stopped");
+        break;
+      default:
+        myServo.write(SERVO_STOP);
+        Serial.println("default behavior: rotation stopped");
+        break;
+    }
+  }
+  prevState = rotationState;
+
+  // check wifi status every 10 seconds
+  if (millis() - previousMillis >= interval) {
+    previousMillis = millis();
+    digitalWrite(ledBuiltinPin, WiFi.isConnected());
+  }
 }
 
 void notFound(AsyncWebServerRequest *request)
@@ -138,12 +139,10 @@ void handleCurtainRequest(AsyncWebServerRequest *request)
     direction = request->getParam(PARAM_DIRECTION, true)->value();
     if (direction == "open")
     {
-      Serial.println("Opening Window");
       rotationState = WIN_TRANSITION_OPEN;
     }
     else if (direction == "close")
     {
-      Serial.println("Closing Window");
       rotationState = WIN_TRANSITION_CLOSE;
     }
     else
@@ -177,19 +176,15 @@ void handleRotateRequest(AsyncWebServerRequest *request)
     direction = request->getParam(PARAM_DIRECTION, true)->value();
     if (direction == "clockwise")
     {
-      Serial.println("Turning clockwise");
       rotationState = WIN_ROTATE_CLOSE;
     }
     else if (direction == "counterclockwise")
     {
-      Serial.println("Turning counterclockwise");
       rotationState = WIN_ROTATE_OPEN;
     }
     else if (direction == "stop")
     {
-      Serial.println("stopping");
       rotationState = WIN_STOP;
-      myServo.write(SERVO_STOP);
     }
     else
     {
@@ -217,9 +212,7 @@ void handleStopRequest(AsyncWebServerRequest *request)
     direction = request->getParam(PARAM_DIRECTION, true)->value();
     if (direction == "stop")
     {
-      Serial.println("stopping");
       rotationState = WIN_STOP;
-      myServo.write(SERVO_STOP);
     }
     else
     {

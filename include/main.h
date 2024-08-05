@@ -1,7 +1,7 @@
 #define SLOW 0
 #define NORMAL 1
 #define FAST 2
-#define SPEED_MODE FAST
+#define SPEED_MODE NORMAL
 
 #if SPEED_MODE == 0
     #define SERVO_ROT_CLOCK 88
