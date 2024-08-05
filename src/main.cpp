@@ -26,7 +26,7 @@ enum windowTransitionState {
 windowTransitionState rotationState = WIN_STOP;
 
 // does this define an end state variable?
-enum windowEndState = {
+enum windowEndState {
   OPEN = 0,
   CLOSE,
   MIDDLE
@@ -77,8 +77,8 @@ void loop()
 
   }
   // make sure window can't be rotated out of bounds
-  if ((globalAngle >= maxRotationInterval[1] - MARGIN && rotationState == WIN_ROTATE_OPEN) ||
-      (globalAngle <= maxRotationInterval[0] + MARGIN && rotationState == WIN_ROTATE_CLOSE))
+  if ((globalAngle >= maxRotationInterval[1] - MARGIN && (rotationState == WIN_ROTATE_OPEN || rotationState == WIN_TRANSITION_OPEN)) ||
+      (globalAngle <= maxRotationInterval[0] + MARGIN && (rotationState == WIN_ROTATE_CLOSE || rotationState == WIN_TRANSITION_CLOSE)))
   {
     rotationState = WIN_STOP;
   }
@@ -87,12 +87,12 @@ void loop()
     case WIN_TRANSITION_OPEN:
     case WIN_ROTATE_OPEN:
       myServo.write(SERVO_ROT_CLOCK);
-      serial.println("rotating open");
+      Serial.println("rotating open");
       break;
     case WIN_TRANSITION_CLOSE:
     case WIN_ROTATE_CLOSE:
       myServo.write(SERVO_ROT_COUNTER);
-      serial.println("rotating close");
+      Serial.println("rotating close");
       break;
     case WIN_STOP:
       myServo.write(SERVO_STOP);
@@ -129,7 +129,7 @@ void handleCurtainRequest(AsyncWebServerRequest *request)
   String direction;
   if (rotationState == WIN_TRANSITION_CLOSE || rotationState == WIN_TRANSITION_OPEN)
   {
-    request->send(403, "text/plain", "Cannot control encoder, current state: " + String(state));
+    request->send(403, "text/plain", "Cannot control encoder, current state: " + String(rotationState));
     return;
   }
 
@@ -168,7 +168,7 @@ void handleRotateRequest(AsyncWebServerRequest *request)
   String direction;
   if (rotationState == WIN_TRANSITION_CLOSE || rotationState == WIN_TRANSITION_OPEN)
   {
-    request->send(403, "text/plain", "Cannot control encoder, current state: " + String(state));
+    request->send(403, "text/plain", "Cannot control encoder, current state: " + String(rotationState));
     return;
   }
 
@@ -188,7 +188,7 @@ void handleRotateRequest(AsyncWebServerRequest *request)
     else if (direction == "stop")
     {
       Serial.println("stopping");
-      rotationState = WIN_STOP
+      rotationState = WIN_STOP;
       myServo.write(SERVO_STOP);
     }
     else
@@ -247,7 +247,7 @@ void handleResetRequest(AsyncWebServerRequest *request)
 
 void handleGetStatusRequest(AsyncWebServerRequest *request)
 {
-  String status = (state == WIN_OPEN) ? "open" : "closed";
+  String status = (endState == OPEN) ? "open" : "closed";
   request->send(200, "application/json", "{\"status\": \"" + status + "\"}");
 }
 
