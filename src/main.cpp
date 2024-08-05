@@ -16,20 +16,21 @@ Button button2(btn2Pin);
 
 const char* PARAM_DIRECTION = "direction";
 const char* PARAM_STOP = "stop";
-enum windowState {
-  WIN_CLOSED = 0,
-  WIN_OPEN,
+enum windowTransitionState {
   WIN_TRANSITION_CLOSE,
-  WIN_TRANSITION_OPEN
+  WIN_TRANSITION_OPEN,
+  WIN_ROTATE_CLOSE,
+  WIN_ROTATE_OPEN,
+  WIN_STOP
 };
+windowTransitionState rotationState = WIN_STOP;
+
+enum windowEndState = {
+  OPEN = 0,
+  CLOSE,
+  MIDDLE
+} endState;
 // open state could potentially be updated when we are between the marging and edge of max rotation interval.
-windowState state = WIN_CLOSED;
-enum rotationState {
-  STOP = 0,
-  ROT_LEFT,
-  ROT_RIGHT
-};
-rotationState rotState = STOP;
 
 float globalAngle = 0;
 const int maxRotationInterval[] = {0, 900}; // max rotation range in degrees
@@ -62,81 +63,59 @@ void setup()
 bool flag = true;
 void loop()
 {
+  digitalWrite(ledBuiltinPin, WiFi.isConnected()); // update to only check once every 10 seconds
   globalAngle = updateRotation();
 
-  if (button1.pressed())
+  // can split this up in a way where overrides makes sense for control
+  // make sure that there isn't something being changed by the post requests before this code
+  if (!(rotationState == WIN_TRANSITION_OPEN || rotationState == WIN_TRANSITION_CLOSE)) {
+    if (button1.pressed()) rotationState = WIN_ROTATE_OPEN;
+    else if (button2.pressed()) rotationState = WIN_ROTATE_CLOSE;
+    else if (button1.released() || button2.released()) rotationState = WIN_STOP;
+  }
+  else {
+
+  }
+  // make sure window can't be rotated out of bounds
+  if ((globalAngle >= maxRotationInterval[1] - MARGIN && rotState == ROT_LEFT) ||
+      (globalAngle <= maxRotationInterval[0] + MARGIN && rotState == ROT_RIGHT))
   {
-    rotState = ROT_LEFT;
+    rotationState = WIN_STOP;
+  }
+
+  switch (rotationState) {
+  case WIN_ROTATE_OPEN:
     myServo.write(SERVO_ROT_CLOCK);
-    Serial.println("rotleft");
-  }
-  else if (button1.released())
-  {
-    rotState = STOP;
-    myServo.write(SERVO_STOP);
-    Serial.println("release");
-  }
-
-  if (button2.pressed())
-  {
-    rotState = ROT_RIGHT;
+    serial.println("rotating open");
+    break;
+  case WIN_ROTATE_CLOSE:
     myServo.write(SERVO_ROT_COUNTER);
-    Serial.println("rotright");
-  }
-
-  else if (button2.released())
-  {
-    rotState = STOP;
+    serial.println("rotating close");
+    break;
+  case WIN_TRANSITION_OPEN:
+    transitionWindow(0);
+    break;
+  case WIN_TRANSITION_CLOSE:
+    transitionWindow(1);
+    break;
+  case WIN_STOP:
     myServo.write(SERVO_STOP);
-    Serial.println("release");
+    Serial.println("rotation stopped");
+    break;
+  default:
+    myServo.write(SERVO_STOP);
+    Serial.println("default behavior: rotation stopped");
+    break;
   }
 
-  if (state == WIN_TRANSITION_CLOSE)
-  {
-    if (flag)
-    {
-      // clock
-      myServo.write(SERVO_ROT_CLOCK);
-      flag = false;
-    }
-
-    if (globalAngle >= maxRotationInterval[1] - MARGIN)
-    {
-      myServo.write(SERVO_STOP);
-      state = WIN_CLOSED;
-      flag = true;
-    }
-  }
-  else if (state == WIN_TRANSITION_OPEN)
-  {
-    if (flag)
-    {
-      // counter
-      myServo.write(SERVO_ROT_COUNTER);
-      flag = false;
-    }
-
-    if (globalAngle <= maxRotationInterval[0] + MARGIN)
-    {
-      myServo.write(SERVO_STOP);
-      state = WIN_OPEN;
-      flag = true;
-    }
-  }
-  else if (rotState)
-  {
-    if (globalAngle >= maxRotationInterval[1] - MARGIN && rotState == ROT_LEFT)
-    {
-      myServo.write(SERVO_STOP);
-      rotState = STOP;
-    }
-    else if (globalAngle <= maxRotationInterval[0] + MARGIN && rotState == ROT_RIGHT)
-    {
-      myServo.write(SERVO_STOP);
-      rotState = STOP;
-    }
-  }
-  digitalWrite(ledBuiltinPin, WiFi.isConnected());
+  // if (rotState)
+  // {
+  //   if ((globalAngle >= maxRotationInterval[1] - MARGIN && rotState == ROT_LEFT) || (globalAngle <= maxRotationInterval[0] + MARGIN && rotState == ROT_RIGHT))
+  //   {
+  //     myServo.write(SERVO_STOP);
+  //     rotState = STOP;
+  //   }
+  // }
 }
 
 void notFound(AsyncWebServerRequest *request)
@@ -293,4 +272,22 @@ void wifiSetup() {
 
   Serial.print("IP Address: ");
   Serial.println(WiFi.localIP());
+}
+
+void transitionWindow(windowEndState desiredState) {
+  static bool flag = false;
+  if (flag)
+    {
+      // clock
+      myServo.write(desiredState == OPEN ? SERVO_ROT_CLOCK : SERVO_ROT_COUNTER);
+      flag = false;
+    }
+
+    if (globalAngle >= maxRotationInterval[1] - MARGIN || globalAngle <= maxRotationInterval[0] + MARGIN)
+    {
+      rotationState = WIN_STOP;
+      myServo.write(SERVO_STOP);
+      endState = desiredState; // probably don't have this if I am manually checking if we are at the end or not
+      flag = true;
+    }
 }
