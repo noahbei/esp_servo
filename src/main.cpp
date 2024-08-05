@@ -25,6 +25,7 @@ enum windowTransitionState {
 };
 windowTransitionState rotationState = WIN_STOP;
 
+// does this define an end state variable?
 enum windowEndState = {
   OPEN = 0,
   CLOSE,
@@ -60,7 +61,6 @@ void setup()
   server.begin();
 }
 
-bool flag = true;
 void loop()
 {
   digitalWrite(ledBuiltinPin, WiFi.isConnected()); // update to only check once every 10 seconds
@@ -77,8 +77,8 @@ void loop()
 
   }
   // make sure window can't be rotated out of bounds
-  if ((globalAngle >= maxRotationInterval[1] - MARGIN && rotState == ROT_LEFT) ||
-      (globalAngle <= maxRotationInterval[0] + MARGIN && rotState == ROT_RIGHT))
+  if ((globalAngle >= maxRotationInterval[1] - MARGIN && rotationState == WIN_ROTATE_OPEN) ||
+      (globalAngle <= maxRotationInterval[0] + MARGIN && rotationState == WIN_ROTATE_CLOSE))
   {
     rotationState = WIN_STOP;
   }
@@ -127,7 +127,7 @@ void notFound(AsyncWebServerRequest *request)
 void handleCurtainRequest(AsyncWebServerRequest *request)
 {
   String direction;
-  if (state == WIN_TRANSITION_CLOSE || state == WIN_TRANSITION_OPEN)
+  if (rotationState == WIN_TRANSITION_CLOSE || rotationState == WIN_TRANSITION_OPEN)
   {
     request->send(403, "text/plain", "Cannot control encoder, current state: " + String(state));
     return;
@@ -139,12 +139,12 @@ void handleCurtainRequest(AsyncWebServerRequest *request)
     if (direction == "open")
     {
       Serial.println("Opening Window");
-      state = WIN_TRANSITION_OPEN;
+      rotationState = WIN_TRANSITION_OPEN;
     }
     else if (direction == "close")
     {
       Serial.println("Closing Window");
-      state = WIN_TRANSITION_CLOSE;
+      rotationState = WIN_TRANSITION_CLOSE;
     }
     else
     {
@@ -166,7 +166,7 @@ void handleCurtainRequest(AsyncWebServerRequest *request)
 void handleRotateRequest(AsyncWebServerRequest *request)
 {
   String direction;
-  if (state == WIN_TRANSITION_CLOSE || state == WIN_TRANSITION_OPEN)
+  if (rotationState == WIN_TRANSITION_CLOSE || rotationState == WIN_TRANSITION_OPEN)
   {
     request->send(403, "text/plain", "Cannot control encoder, current state: " + String(state));
     return;
@@ -178,19 +178,17 @@ void handleRotateRequest(AsyncWebServerRequest *request)
     if (direction == "clockwise")
     {
       Serial.println("Turning clockwise");
-      rotState = ROT_RIGHT;
-      myServo.write(SERVO_ROT_COUNTER);
+      rotationState = WIN_ROTATE_CLOSE;
     }
     else if (direction == "counterclockwise")
     {
       Serial.println("Turning counterclockwise");
-      rotState = ROT_LEFT;
-      myServo.write(SERVO_ROT_CLOCK);
+      rotationState = WIN_ROTATE_OPEN;
     }
     else if (direction == "stop")
     {
       Serial.println("stopping");
-      rotState = STOP;
+      rotationState = WIN_STOP
       myServo.write(SERVO_STOP);
     }
     else
@@ -220,7 +218,7 @@ void handleStopRequest(AsyncWebServerRequest *request)
     if (direction == "stop")
     {
       Serial.println("stopping");
-      rotState = STOP;
+      rotationState = WIN_STOP;
       myServo.write(SERVO_STOP);
     }
     else
