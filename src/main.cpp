@@ -4,6 +4,7 @@
 #include <WiFi.h>
 #include <AsyncTCP.h>
 #include <Button.h>
+#include <string>
 #include "main.h"
 #include "wifi-config.h"
 #include "MagneticEncoder.h"
@@ -37,6 +38,14 @@ enum windowEndState {
 float globalAngle = 0;
 const int maxRotationInterval[] = {0, 900}; // max rotation range in degrees
 
+struct Schedule {
+    std::string hour;
+    std::string minute;
+    std::string tod; // time of day (am/pm)
+};
+Schedule openTime = {"10", "00", "am"};
+Schedule closeTime = {"09", "00", "pm"};
+
 void setup()
 {
   Serial.begin(115200);
@@ -57,6 +66,8 @@ void setup()
   server.on("/stop", HTTP_POST, handleStopRequest);
   server.on("/resetPosition", HTTP_POST, handleResetRequest);
   server.on("/status", HTTP_GET, handleGetStatusRequest);
+  server.on("/schedule", HTTP_POST, handleSchedulePost);
+  server.on("/schedule", HTTP_GET, handleScheduleGet);
 
   server.onNotFound(notFound);
   server.begin();
@@ -227,6 +238,42 @@ void handleStopRequest(AsyncWebServerRequest *request)
 }
 
 /**
+ * @brief <IP>/schedule route handler
+ * 
+ * Send a POST request to <IP>/schedule with a form field message set to open and close
+ */
+void handleSchedulePost(AsyncWebServerRequest *request)
+{
+  //param will be schedule json, will have to update the schedule object using this
+  String direction;
+  if (rotationState == WIN_TRANSITION_CLOSE || rotationState == WIN_TRANSITION_OPEN)
+  {
+    request->send(403, "text/plain", "Cannot control encoder, current state: " + String(rotationState));
+    return;
+  }
+
+  if (request->hasParam(PARAM_DIRECTION, true))
+  {
+    direction = request->getParam(PARAM_DIRECTION, true)->value();
+  }
+  else
+  {
+    direction = "Invalid Direction";
+  }
+  request->send(200, "text/plain", "Hello, POST: " + direction);
+}
+
+/**
+ * @brief <IP>/schedule route handler
+ * 
+ * Send a GET request to <IP>/schedule to get current open and close times
+ */
+void handleScheduleGet(AsyncWebServerRequest *request)
+{
+  request->send(200, "text/plain", "openTime");
+}
+
+/**
  * @brief <IP>/resetPosition route handler
  * 
  * Send a POST request to <IP>/resetPosition to re-define the initial 0-offest
@@ -247,7 +294,8 @@ void handleGetStatusRequest(AsyncWebServerRequest *request)
 /**
  * @brief tony from the bronx
  */
-void wifiSetup() {
+void wifiSetup()
+{
   WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   if (WiFi.waitForConnectResult() != WL_CONNECTED)

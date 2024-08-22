@@ -33,6 +33,8 @@ void notFound(AsyncWebServerRequest *request);
 void handleCurtainRequest(AsyncWebServerRequest *request);
 void handleRotateRequest(AsyncWebServerRequest *request);
 void handleStopRequest(AsyncWebServerRequest *request);
+void handleSchedulePost(AsyncWebServerRequest *request);
+void handleScheduleGet(AsyncWebServerRequest *request);
 void handleResetRequest(AsyncWebServerRequest *request);
 void handleGetStatusRequest(AsyncWebServerRequest *request);
 void wifiSetup();
