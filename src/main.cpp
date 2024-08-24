@@ -3,6 +3,7 @@
 #include <ESPAsyncWebServer.h>
 #include <WiFi.h>
 #include <AsyncTCP.h>
+#include <ElegantOTA.h>
 #include <Button.h>
 #include <string>
 #include "main.h"
@@ -70,6 +71,12 @@ void setup()
   server.on("/schedule", HTTP_GET, handleScheduleGet);
 
   server.onNotFound(notFound);
+  ElegantOTA.begin(&server);    // Start ElegantOTA
+  // ElegantOTA callbacks
+  ElegantOTA.onStart(onOTAStart);
+  ElegantOTA.onProgress(onOTAProgress);
+  ElegantOTA.onEnd(onOTAEnd);
+
   server.begin();
 }
 
@@ -77,6 +84,7 @@ unsigned long previousMillis = 0;
 const long interval = 10000; // 10 seconds
 void loop()
 {
+  ElegantOTA.loop();
   globalAngle = updateRotation();
 
   // lock control to rotate open/closed when win_transition_x is active
@@ -307,4 +315,30 @@ void wifiSetup()
 
   Serial.print("IP Address: ");
   Serial.println(WiFi.localIP());
+}
+
+unsigned long ota_progress_millis = 0;
+
+void onOTAStart() {
+  // Log when OTA has started
+  Serial.println("OTA update started!");
+  // <Add your own code here>
+}
+
+void onOTAProgress(size_t current, size_t final) {
+  // Log every 1 second
+  if (millis() - ota_progress_millis > 1000) {
+    ota_progress_millis = millis();
+    Serial.printf("OTA Progress Current: %u bytes, Final: %u bytes\n", current, final);
+  }
+}
+
+void onOTAEnd(bool success) {
+  // Log when OTA has finished
+  if (success) {
+    Serial.println("OTA update finished successfully!");
+  } else {
+    Serial.println("There was an error during OTA update!");
+  }
+  // <Add your own code here>
 }
