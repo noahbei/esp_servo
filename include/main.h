@@ -37,6 +37,7 @@ void handleSchedulePost(AsyncWebServerRequest *request);
 void handleScheduleGet(AsyncWebServerRequest *request);
 void handleResetRequest(AsyncWebServerRequest *request);
 void handleGetStatusRequest(AsyncWebServerRequest *request);
+void handleStateGet(AsyncWebServerRequest *request);
 void wifiSetup();
 void onOTAStart(); // Called when OTA update starts
 void onOTAProgress(size_t current, size_t final); // Called during OTA update to show progress

@@ -69,6 +69,7 @@ void setup()
   server.on("/status", HTTP_GET, handleGetStatusRequest);
   server.on("/schedule", HTTP_POST, handleSchedulePost);
   server.on("/schedule", HTTP_GET, handleScheduleGet);
+  server.on("/state", HTTP_GET, handleStateGet);
 
   server.onNotFound(notFound);
   ElegantOTA.begin(&server);    // Start ElegantOTA
@@ -297,6 +298,11 @@ void handleGetStatusRequest(AsyncWebServerRequest *request)
 {
   String status = (endState == OPEN) ? "open" : "closed";
   request->send(200, "application/json", "{\"status\": \"" + status + "\"}");
+}
+
+void handleStateGet(AsyncWebServerRequest *request)
+{
+  request->send(200, "text/plain", String(rotationState));
 }
 
 /**
